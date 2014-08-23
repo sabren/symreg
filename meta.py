@@ -249,9 +249,36 @@ def walk_python(visitor:object):
     GrammarWalker(visitor).walk(python_grammar())
 
 
+# these two can be passed as literals to Emitter.emit()
+class INDENT:pass
+class DEDENT:pass
+
 class Emitter:
     def __init__(self, emitFn=sys.stdout.write):
-        self.emit = emitFn
+        self.emitFn = emitFn
+        self.level = 0
+        self.indent_str = '    '
+
+    def emit(self, s:str):
+        if s == '\n': self.newline()
+        elif s is INDENT:
+            self.indent(); self.newline()
+        elif s is DEDENT:
+            self.dedent(); self.newline()
+        else: self.emitFn(s)
+
+    def indent(self):
+        self.level += 1
+
+    def dedent(self):
+        self.level -= 1
+        assert self.level >= 0, 'cannot dedent any further!'
+
+    def newline(self):
+        self.emitFn('\n' + self.indent_str * self.level)
+
+    def indentation(self):
+        return self.indent_str * self.level
 
     def between(self, walk, nodes, sep):
         """sort of like sep.join(nodes) but imperative"""
@@ -263,6 +290,7 @@ class Emitter:
 
     def emitAll(self, *strings):
         for s in strings: self.emit(s)
+
 
 class EBNFEmitter(Emitter):
     """
